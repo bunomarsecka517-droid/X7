@@ -1,0 +1,26 @@
+{
+  "name": "x7-protocol",
+  "version": "1.0.0",
+  "description": "X7 Sovereign Trading Protocol - Multi-Strategy DeFi Bot",
+  "main": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network polygon-mumbai",
+    "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet",
+    "test": "hardhat test"
+  },
+  "dependencies": {
+    "ethers": "^6.0.0",
+    "axios": "^1.4.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0",
+    "hardhat": "^2.14.0",
+    "@openzeppelin/contracts": "^4.9.0"
+  }
+}
