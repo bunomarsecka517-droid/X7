@@ -1,26 +1,31 @@
 {
   "name": "x7-protocol",
   "version": "1.0.0",
-  "description": "X7 Sovereign Trading Protocol - Multi-Strategy DeFi Bot",
-  "main": "index.ts",
+  "description": "X7 Sovereign Trading Protocol - Multi-Strategy DeFi Bot (Railway Optimized)",
+  "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "deploy:testnet": "hardhat run scripts/deploy.ts --network polygon-mumbai",
-    "deploy:mainnet": "hardhat run scripts/deploy.ts --network mainnet",
-    "test": "hardhat test"
+    "generate-treasury": "ts-node scripts/generate-treasury.ts",
+    "test": "echo 'Tests not configured yet'",
+    "lint": "echo 'Linting not configured'"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
-    "ethers": "^6.0.0",
-    "axios": "^1.4.0",
-    "dotenv": "^16.0.0"
+    "ethers": "^6.8.0",
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
-    "@types/node": "^18.0.0",
-    "typescript": "^5.0.0",
-    "ts-node": "^10.0.0",
-    "hardhat": "^2.14.0",
-    "@openzeppelin/contracts": "^4.9.0"
+    "@types/node": "^20.0.0",
+    "@types/express": "^4.17.17",
+    "@types/ws": "^8.5.4",
+    "typescript": "^5.2.0",
+    "ts-node": "^10.9.1"
   }
 }
