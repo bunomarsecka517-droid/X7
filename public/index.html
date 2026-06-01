@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X7 Sovereign - Real-time Trading Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0f172a;
+            --secondary: #1e293b;
+            --accent: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #334155;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary) 0%, #0d1117 100%);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto 1fr 1fr;
+            height: 100vh;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+        }
+
+        .metric {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .metric.danger .metric-value {
+            color: var(--danger);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        button {
+            background: var(--accent);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        button.danger {
+            background: var(--danger);
+        }
+
+        button.danger:hover {
+            background: #dc2626;
+        }
+
+        .chart {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            margin-top: 12px;
+            min-height: 60px;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, var(--accent), #059669);
+            border-radius: 2px 2px 0 0;
+            min-height: 2px;
+            opacity: 0.8;
+            transition: all 0.2s;
+        }
+
+        .bar:hover {
+            opacity: 1;
+        }
+
+        .strategies {
+            grid-column: 1 / 2;
+            grid-row: 2 / 4;
+        }
+
+        .strategies-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .strategy-item {
+            background: rgba(20, 30, 48, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 10px;
+            font-size: 0.85rem;
+        }
+
+        .strategy-item.disabled {
+            opacity: 0.5;
+            border-color: var(--danger);
+        }
+
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .strategy-name {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .strategy-stat {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .toggle-btn {
+            width: 32px;
+            padding: 4px 6px;
+            font-size: 0.65rem;
+        }
+
+        .alerts {
+            grid-column: 2 / 4;
+            grid-row: 2 / 3;
+        }
+
+        .alerts-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 12px;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .alert-item {
+            background: rgba(20, 30, 48, 0.6);
+            border-left: 3px solid var(--accent);
+            padding: 8px;
+            margin-bottom: 4px;
+            font-size: 0.8rem;
+            border-radius: 2px;
+        }
+
+        .alert-item.error {
+            border-left-color: var(--danger);
+        }
+
+        .alert-time {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+
+        .trades {
+            grid-column: 2 / 4;
+            grid-row: 3 / 4;
+        }
+
+        .trades-table {
+            width: 100%;
+            font-size: 0.8rem;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .trades-table th {
+            text-align: left;
+            padding: 6px;
+            border-bottom: 1px solid var(--border);
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .trades-table td {
+            padding: 6px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .trades-table tr:hover {
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .profit {
+            color: var(--accent);
+            font-weight: bold;
+        }
+
+        .loss {
+            color: var(--danger);
+        }
+
+        .withdraw-panel {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .withdraw-panel input {
+            flex: 1;
+            background: rgba(20, 30, 48, 0.6);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .withdraw-panel input::placeholder {
+            color: var(--muted);
+        }
+
+        .withdraw-panel button {
+            flex: 0 0 auto;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-right: 4px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        .alerts-list, .strategies-grid, .trades-table {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- HEADER METRICS -->
+        <div class="header">
+            <div class="metric">
+                <div class="metric-label">Total Profit</div>
+                <div class="metric-value" id="totalProfit">$0</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Daily Revenue</div>
+                <div class="metric-value" id="dailyRevenue">$0</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Trades</div>
+                <div class="metric-value" id="tradesExecuted">0</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Win Rate</div>
+                <div class="metric-value" id="winRate">0%</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Capital</div>
+                <div class="metric-value" id="capitalDeployed">$0</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Treasury Balance</div>
+                <div class="metric-value" id="treasuryBalance">$0</div>
+            </div>
+        </div>
+
+        <!-- STRATEGIES CONTROL -->
+        <div class="card strategies">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>🎯 Strategies</h3>
+                <div>
+                    <button onclick="resumeAll()" style="padding: 6px 12px; font-size: 0.8rem;">Resume All</button>
+                    <button onclick="pauseAll()" class="danger" style="padding: 6px 12px; font-size: 0.8rem; margin-left: 4px;">Pause All</button>
+                </div>
+            </div>
+            <div class="strategies-grid" id="strategiesList"></div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="card alerts">
+            <h3>📢 Alerts</h3>
+            <div class="alerts-list scrollbar" id="alertsList"></div>
+        </div>
+
+        <!-- RECENT TRADES -->
+        <div class="card trades">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h3>📊 Recent Trades</h3>
+                <div>
+                    <label for="tokenSelect" style="font-size: 0.8rem; margin-right: 8px;">Withdraw: </label>
+                    <div class="withdraw-panel">
+                        <input type="number" id="withdrawAmount" placeholder="Amount" min="0" step="100">
+                        <button onclick="initiateWithdrawal()">Settle</button>
+                    </div>
+                </div>
+            </div>
+            <table class="trades-table" id="tradesTable">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Chain</th>
+                        <th>Profit</th>
+                        <th>Gas</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="tradesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        let metrics = {};
+
+        ws.onopen = () => console.log('✅ Connected to X7 Dashboard');
+        ws.onerror = (error) => console.error('❌ WebSocket error:', error);
+        ws.onclose = () => console.log('⚠️ Disconnected from dashboard');
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+
+            if (message.type === 'INITIAL_DATA') {
+                metrics = message.data;
+                updateUI();
+            } else if (message.type === 'METRICS_UPDATE') {
+                metrics = message.data;
+                updateUI();
+            } else if (message.type === 'NEW_TRADE') {
+                addTradeToTable(message.trade);
+            } else if (message.type === 'ALERT') {
+                addAlert(message.message);
+            }
+        };
+
+        function updateUI() {
+            document.getElementById('totalProfit').textContent = `$${(metrics.totalProfit / 1000).toFixed(1)}K`;
+            document.getElementById('dailyRevenue').textContent = `$${(metrics.dailyRevenue / 1000).toFixed(1)}K`;
+            document.getElementById('tradesExecuted').textContent = metrics.tradesExecuted;
+            document.getElementById('winRate').textContent = `${(metrics.winRate * 100).toFixed(1)}%`;
+            document.getElementById('capitalDeployed').textContent = `$${(metrics.capitalDeployed / 1000000).toFixed(2)}M`;
+            document.getElementById('treasuryBalance').textContent = `$${(metrics.treasury.balance / 1000000).toFixed(2)}M`;
+
+            updateStrategies();
+            updateAlerts();
+        }
+
+        function updateStrategies() {
+            const html = Object.entries(metrics.strategies).map(([key, strategy]) => `
+                <div class="strategy-item ${!strategy.enabled ? 'disabled' : ''}">
+                    <div class="strategy-header">
+                        <span class="strategy-name">${key.toUpperCase()}</span>
+                        <button class="toggle-btn" onclick="toggleStrategy('${key}')">${strategy.enabled ? 'ON' : 'OFF'}</button>
+                    </div>
+                    <div class="strategy-stat">Trades: ${strategy.trades} | Profit: $${(strategy.profit / 1000).toFixed(1)}K</div>
+                </div>
+            `).join('');
+            document.getElementById('strategiesList').innerHTML = html;
+        }
+
+        function updateAlerts() {
+            const html = metrics.alerts.map(alert => `
+                <div class="alert-item ${alert.message.includes('❌') ? 'error' : ''}">
+                    <div>${alert.message}</div>
+                    <div class="alert-time">${new Date(alert.timestamp).toLocaleTimeString()}</div>
+                </div>
+            `).join('');
+            document.getElementById('alertsList').innerHTML = html;
+        }
+
+        function addTradeToTable(trade) {
+            const tbody = document.getElementById('tradesBody');
+            const row = document.createElement('tr');
+            const profitClass = trade.profit > 0 ? 'profit' : 'loss';
+            row.innerHTML = `
+                <td>${trade.type}</td>
+                <td>${trade.chain}</td>
+                <td class="${profitClass}">$${trade.profit.toFixed(0)}</td>
+                <td>$${(trade.gas || 0).toFixed(2)}</td>
+                <td>${new Date(trade.timestamp).toLocaleTimeString()}</td>
+            `;
+            tbody.insertBefore(row, tbody.firstChild);
+            while (tbody.rows.length > 20) tbody.deleteRow(tbody.rows.length - 1);
+        }
+
+        function addAlert(message) {
+            const alertsList = document.getElementById('alertsList');
+            const alert = document.createElement('div');
+            alert.className = `alert-item ${message.includes('❌') ? 'error' : ''}`;
+            alert.innerHTML = `
+                <div>${message}</div>
+                <div class="alert-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            alertsList.insertBefore(alert, alertsList.firstChild);
+            while (alertsList.children.length > 30) alertsList.removeChild(alertsList.lastChild);
+        }
+
+        async function toggleStrategy(strategy) {
+            const response = await fetch(`/api/strategy/${strategy}/toggle`, { method: 'POST' });
+            const data = await response.json();
+            if (data.success) updateUI();
+        }
+
+        async function pauseAll() {
+            await fetch('/api/pause-all', { method: 'POST' });
+            updateUI();
+        }
+
+        async function resumeAll() {
+            await fetch('/api/resume-all', { method: 'POST' });
+            updateUI();
+        }
+
+        async function initiateWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            if (!amount || amount <= 0) {
+                alert('Enter valid amount');
+                return;
+            }
+            const response = await fetch('/api/withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount, token: 'USDC' })
+            });
+            const data = await response.json();
+            if (data.success) {
+                alert(`✅ Withdrawal initiated: $${amount}\nModem Pay will settle to your account.`);
+                document.getElementById('withdrawAmount').value = '';
+            } else {
+                alert(`❌ Withdrawal failed: ${data.error}`);
+            }
+        }
+
+        // Auto-update every 2 seconds
+        setInterval(() => {
+            fetch('/api/metrics').then(r => r.json()).then(data => {
+                metrics = data;
+                updateUI();
+            });
+        }, 2000);
+    </script>
+</body>
+</html>
