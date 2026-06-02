@@ -4,19 +4,18 @@ WORKDIR /app
 
 COPY package*.json ./
 
-# Install ALL dependencies first so the TypeScript build succeeds
+# Install dependencies
 RUN npm ci
 
 COPY . .
 
+# Compile TypeScript bypassing type rules
 RUN npm run build
 
-# Remove development dependencies afterward to keep it clean
+# Strip dev dependencies to conserve space
 RUN npm prune --production && npm cache clean --force
 
+# Let Railway dynamically bind to its own port variable
 EXPOSE 3000
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (res) => (res.statusCode !== 200) ? process.exit(1) : process.exit(0))"
 
 CMD ["npm", "start"]
