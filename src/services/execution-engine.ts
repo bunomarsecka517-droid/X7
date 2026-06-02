@@ -5,13 +5,14 @@ interface ExecutionResult {
   success: boolean;
   txHash?: string;
   profit?: number;
+  gasUsed?: number;
   error?: string;
 }
 
 class ExecutionEngine {
   private providers: Map<string, ethers.providers.JsonRpcProvider>;
   private signer: ethers.Signer | null;
-  private pimlicoUrl = 'https://api.pimlico.io';
+  private pimlicoUrl = 'https://pimlico.io';
   private pimlicoApiKey: string;
   private executionLog: any[] = [];
   private retryAttempts = 2;
@@ -28,7 +29,7 @@ class ExecutionEngine {
         this.providers.set(chain, new ethers.providers.JsonRpcProvider(url));
       }
     });
-    
+
     this.signer = privateKey ? new ethers.Wallet(privateKey) : null;
     this.pimlicoApiKey = pimlicoApiKey;
   }
@@ -43,11 +44,6 @@ class ExecutionEngine {
 
     for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
       try {
-        // Try Pimlico gas sponsorship first (most reliable)
-        const result = await this.executeViaPimlico(transactions, chain);
-        if (result.success) return result;
-
-        // Fallback to standard RPC
         return await this.executeViaStandardRPC(transactions, chain);
       } catch (error) {
         if (attempt < this.retryAttempts - 1) {
@@ -62,44 +58,6 @@ class ExecutionEngine {
     return { success: false, error: 'All execution attempts failed' };
   }
 
-  private async executeViaPimlico(
-    transactions: any[],
-    chain: string
-  ): Promise<ExecutionResult> {
-    try {
-      if (!this.pimlicoApiKey) {
-        throw new Error('Pimlico API key not configured');
-      }
-
-      const provider = this.providers.get(chain);
-      if (!provider) throw new Error('Chain RPC not configured');
-
-      // Build transaction with gas estimation
-      const tx = transactions[0];
-      const gasEstimate = await provider.estimateGas(tx);
-      
-      tx.gasLimit = gasEstimate.mul(120).div(100); // 20% buffer
-      tx.type = 2; // EIP-1559
-      tx.maxPriorityFeePerGas = ethers.parseUnits('2', 'gwei');
-      tx.maxFeePerGas = ethers.parseUnits('50', 'gwei');
-
-      // For production: integrate actual Pimlico sponsorship
-      // For now: use standard execution
-      const signedTx = await this.signer?.signTransaction(tx);
-      if (!signedTx) throw new Error('Transaction signing failed');
-
-      const txResponse = await provider.broadcastTransaction(signedTx);
-      const receipt = await txResponse.wait();
-
-      return {
-        success: !!receipt,
-        txHash: receipt?.hash,
-      };
-    } catch (error) {
-      throw error;
-    }
-  }
-
   private async executeViaStandardRPC(
     transactions: any[],
     chain: string
@@ -112,16 +70,20 @@ class ExecutionEngine {
 
       const tx = transactions[0];
       const connectedSigner = this.signer.connect(provider);
-      
+
+      tx.gasLimit = ethers.BigNumber.from(300000);
+      tx.gasPrice = await provider.getGasPrice();
+
       const txResponse = await connectedSigner.sendTransaction(tx);
-      await txResponse.wait();
+      const receipt = await txResponse.wait();
 
       return {
-        success: true,
-        txHash: txResponse.hash,
+        success: !!receipt,
+        txHash: receipt?.transactionHash,
+        gasUsed: receipt?.gasUsed?.toNumber() || 0,
       };
     } catch (error) {
-      console.error('Standard RPC execution error:', error);
+      console.error('RPC execution error:', error);
       return { success: false, error: String(error) };
     }
   }
@@ -130,12 +92,12 @@ class ExecutionEngine {
     try {
       const provider = this.providers.get(chain);
       if (!provider) throw new Error('Chain not found');
-      
+
       const gasEstimate = await provider.estimateGas(tx);
-      return Number(gasEstimate) * 1.2; // 20% buffer
+      return Number(gasEstimate) * 1.2;
     } catch (error) {
       console.error('Gas estimation error:', error);
-      return 300000; // Safe fallback
+      return 300000;
     }
   }
 }

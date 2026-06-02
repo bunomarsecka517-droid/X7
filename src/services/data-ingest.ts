@@ -15,11 +15,13 @@ class DataIngestService {
   constructor(rpcUrls: { [key: string]: string }) {
     this.providers = new Map();
     Object.entries(rpcUrls).forEach(([chain, url]) => {
-      this.providers.set(chain, new ethers.providers.JsonRpcProvider(url));
+      if (url) {
+        this.providers.set(chain, new ethers.providers.JsonRpcProvider(url));
+      }
     });
   }
 
-  async startMemPoolMonitoring(chains: string[]) {
+  async startMempoolMonitoring(chains: string[]) {
     for (const chain of chains) {
       const provider = this.providers.get(chain);
       if (!provider) continue;
@@ -27,7 +29,7 @@ class DataIngestService {
       provider.on('pending', async (txHash) => {
         try {
           const tx = await provider.getTransaction(txHash);
-          if (tx && tx.value && ethers.BigNumber.from(tx.value).gt(ethers.parseEther('1'))) {
+          if (tx && tx.value && ethers.BigNumber.from(tx.value).gt(ethers.utils.parseEther('1'))) {
             this.eventQueue.push({
               type: 'MEMPOOL_TX',
               chain,
@@ -45,15 +47,14 @@ class DataIngestService {
   async monitorOnChainEvents(chains: string[]) {
     const AAVE_LENDING_POOL = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9';
     const UNISWAP_ROUTER = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
-    
+
     for (const chain of chains) {
       const provider = this.providers.get(chain);
       if (!provider) continue;
 
-      // Listen for Aave Liquidation events
       const aaveFilter = {
         address: AAVE_LENDING_POOL,
-        topics: [ethers.id('LiquidationCall(address,address,address,uint256,uint256,address,bool)')],
+        topics: [ethers.utils.id('LiquidationCall(address,address,address,uint256,uint256,address,bool)')],
       };
 
       provider.on(aaveFilter, (log) => {
@@ -65,10 +66,9 @@ class DataIngestService {
         });
       });
 
-      // Listen for Uniswap Swap events
       const uniswapFilter = {
         address: UNISWAP_ROUTER,
-        topics: [ethers.id('Swap(bytes32,uint256,uint256,uint160,uint128,int24)')],
+        topics: [ethers.utils.id('Swap(bytes32,uint256,uint256,uint160,uint128,int24)')],
       };
 
       provider.on(uniswapFilter, (log) => {
@@ -84,11 +84,10 @@ class DataIngestService {
 
   async getPrices(tokens: string[]): Promise<{ [key: string]: number }> {
     const prices: { [key: string]: number } = {};
-    
     try {
-      const response = await axios.get('https://api.coingecko.com/api/v3/simple/token_price/ethereum', {
+      const response = await axios.get('https://api.coingecko.com/api/v3/simple/price', {
         params: {
-          contract_addresses: tokens.join(','),
+          ids: tokens.join(','),
           vs_currencies: 'usd',
         },
       });
