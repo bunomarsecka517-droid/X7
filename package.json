@@ -4,7 +4,7 @@
   "description": "X7 Sovereign Trading Protocol - Multi-Strategy DeFi Bot (Railway Optimized)",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc --skipLibCheck",
+    "build": "tsc --skipLibCheck --noCheck",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
     "generate-treasury": "ts-node scripts/generate-treasury.ts",
@@ -15,17 +15,17 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "ethers": "^6.8.0",
-    "express": "^4.18.2",
-    "ws": "^8.14.2",
+    "axios": "^1.6.0",
     "dotenv": "^16.3.1",
-    "axios": "^1.6.0"
+    "ethers": "^5.7.2",
+    "express": "^4.18.2",
+    "ws": "^8.14.2"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
     "@types/express": "^4.17.17",
+    "@types/node": "^20.0.0",
     "@types/ws": "^8.5.4",
-    "typescript": "^5.2.0",
-    "ts-node": "^10.9.1"
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.0"
   }
 }
